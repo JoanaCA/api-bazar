@@ -1,0 +1,23 @@
+info:
+  name: Crear Cliente
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: http://localhost:8080/clientes/crear
+  body:
+    type: json
+    data: |-
+      {
+        "nombre": "Ana",
+        "apellido": "Gomez",
+        "dni": "35123456"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
