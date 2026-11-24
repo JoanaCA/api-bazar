@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
+
+    boolean existsByDni(String dni);
+
+    boolean existsByDniAndIdClienteNot(String dni, Long idCliente);
 }

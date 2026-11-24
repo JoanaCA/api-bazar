@@ -1,20 +1,35 @@
 package com.bazar.api_bazar.service;
-import com.bazar.api_bazar.dto.MayorVentaDTO;
-import com.bazar.api_bazar.dto.VentasDiaDTO;
-import com.bazar.api_bazar.model.Producto;
-import com.bazar.api_bazar.model.Venta;
+
+import com.bazar.api_bazar.dto.request.VentaRequest;
+import com.bazar.api_bazar.dto.response.DetalleVentaResponse;
+import com.bazar.api_bazar.dto.response.MayorVentaResponse;
+import com.bazar.api_bazar.dto.response.VentaResponse;
+import com.bazar.api_bazar.dto.response.VentasDiaResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
 
 public interface IVentaService {
 
-    void saveVenta(Venta venta);
-    List<Venta> getVentas();
-    Venta getVenta(Long codigo_venta);
-    void deleteVenta(Long codigo_venta);
-    void editVenta(Venta venta);
-    List<Producto> getProductosByVenta(Long codigo_venta); //Requerimiento 5
-    VentasDiaDTO getTotalesPorDia(LocalDate fecha_venta); // requerimiento 6
-    MayorVentaDTO getMayorVenta(); // reqr 7
+    VentaResponse crear(VentaRequest request);
+
+    Page<VentaResponse> listar(Pageable pageable);
+
+    VentaResponse obtener(Long codigoVenta);
+
+    VentaResponse actualizar(Long codigoVenta, VentaRequest request);
+
+    /** Anula la venta y devuelve las unidades al stock. */
+    void eliminar(Long codigoVenta);
+
+    /** Requerimiento 5: productos de una venta. */
+    List<DetalleVentaResponse> listarProductos(Long codigoVenta);
+
+    /** Requerimiento 6: monto total y cantidad de ventas de un día. */
+    VentasDiaResponse totalesPorDia(LocalDate fecha);
+
+    /** Requerimiento 7: venta de mayor monto. */
+    MayorVentaResponse mayorVenta();
 }
