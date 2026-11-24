@@ -1,11 +1,11 @@
 info:
-  name: R.5-Obtener la lista de productos de una determinada venta
+  name: R.4 - Productos con stock bajo
   type: http
-  seq: 2
+  seq: 6
 
 http:
   method: GET
-  url: http://localhost:8080/ventas/productos/{codigo_venta}
+  url: http://localhost:8080/api/v1/productos/stock-bajo
   auth: inherit
 
 settings:

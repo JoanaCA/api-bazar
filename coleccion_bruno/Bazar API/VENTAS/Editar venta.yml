@@ -1,11 +1,22 @@
 info:
   name: Editar venta
   type: http
-  seq: 8
+  seq: 4
 
 http:
   method: PUT
-  url: http://localhost:8080/clientes/editar/{codigo_venta}
+  url: http://localhost:8080/api/v1/ventas/1
+  body:
+    type: json
+    data: |-
+      {
+        "clienteId": 1,
+        "fechaVenta": "2026-03-07",
+        "items": [
+          { "productoId": 1, "cantidad": 2 },
+          { "productoId": 2, "cantidad": 1 }
+        ]
+      }
   auth: inherit
 
 settings:
