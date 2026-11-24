@@ -1,11 +1,11 @@
 info:
-  name: Eliminar venta
+  name: Eliminar cliente
   type: http
-  seq: 4
+  seq: 5
 
 http:
   method: DELETE
-  url: http://localhost:8080/ventas/eliminar/{codigo_venta}
+  url: http://localhost:8080/api/v1/clientes/1
   auth: inherit
 
 settings:

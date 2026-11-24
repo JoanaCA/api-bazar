@@ -1,48 +1,58 @@
 package com.bazar.api_bazar.controller;
-import com.bazar.api_bazar.model.Cliente;
+
+import com.bazar.api_bazar.dto.request.ClienteRequest;
+import com.bazar.api_bazar.dto.response.ClienteResponse;
 import com.bazar.api_bazar.service.IClienteService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 @RestController
+@RequestMapping("/api/v1/clientes")
+@RequiredArgsConstructor
 public class ClienteController {
 
-    @Autowired
-    private IClienteService clienteService;
+    private final IClienteService clienteService;
 
-    @PostMapping("/clientes/crear")
-    public ResponseEntity<String> crearCliente(@RequestBody Cliente cliente) {
-        clienteService.saveCliente(cliente);
-        return new ResponseEntity<>("Cliente creado correctamente", HttpStatus.CREATED); //201
+    @PostMapping
+    public ResponseEntity<ClienteResponse> crear(@Valid @RequestBody ClienteRequest request) {
+        ClienteResponse creado = clienteService.crear(request);
+        URI ubicacion = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(creado.idCliente()).toUri();
+        return ResponseEntity.created(ubicacion).body(creado);
     }
 
-    @GetMapping("/clientes")
-    public ResponseEntity<List<Cliente>> traerClientes() {
-        List<Cliente> clientes = clienteService.getClientes();
-        return new ResponseEntity<>(clientes, HttpStatus.OK); //200
+    @GetMapping
+    public Page<ClienteResponse> listar(Pageable pageable) {
+        return clienteService.listar(pageable);
     }
 
-    @GetMapping("/clientes/{id_cliente}")
-    public ResponseEntity<Cliente> traerCliente(@PathVariable Long id_cliente) {
-        Cliente cliente = clienteService.getCliente(id_cliente);
-        return new ResponseEntity<>(cliente, HttpStatus.OK); // Devuelve 200
+    @GetMapping("/{id}")
+    public ClienteResponse obtener(@PathVariable Long id) {
+        return clienteService.obtener(id);
     }
 
-    @DeleteMapping("/clientes/eliminar/{id_cliente}")
-    public ResponseEntity<String> eliminarCliente(@PathVariable Long id_cliente) {
-        clienteService.deleteCliente(id_cliente);
-        return new ResponseEntity<>("Cliente eliminado correctamente", HttpStatus.OK); // Devuelve 200
+    @PutMapping("/{id}")
+    public ClienteResponse actualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequest request) {
+        return clienteService.actualizar(id, request);
     }
 
-    @PutMapping("/clientes/editar/{id_cliente}")
-    public ResponseEntity<Cliente> editarCliente(@PathVariable Long id_cliente, @RequestBody Cliente clienteEditado) {
-        clienteEditado.setId_cliente(id_cliente);
-        clienteService.editCliente(clienteEditado);
-
-        Cliente clienteActualizado = clienteService.getCliente(id_cliente);
-        return new ResponseEntity<>(clienteActualizado, HttpStatus.OK); // Devuelve 200
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        clienteService.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 }

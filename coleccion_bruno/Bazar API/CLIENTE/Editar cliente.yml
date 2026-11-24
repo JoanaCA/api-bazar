@@ -1,11 +1,19 @@
 info:
   name: Editar cliente
   type: http
-  seq: 5
+  seq: 4
 
 http:
   method: PUT
-  url: http://localhost:8080/clientes/editar/{id_cliente}
+  url: http://localhost:8080/api/v1/clientes/1
+  body:
+    type: json
+    data: |-
+      {
+        "nombre": "Ana",
+        "apellido": "Gomez",
+        "dni": "35123456"
+      }
   auth: inherit
 
 settings:

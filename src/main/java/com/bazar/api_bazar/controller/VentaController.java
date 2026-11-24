@@ -1,86 +1,83 @@
 package com.bazar.api_bazar.controller;
 
-import com.bazar.api_bazar.dto.MayorVentaDTO;
-import com.bazar.api_bazar.dto.VentasDiaDTO;
-import com.bazar.api_bazar.model.Producto;
-import com.bazar.api_bazar.model.Venta;
+import com.bazar.api_bazar.dto.request.VentaRequest;
+import com.bazar.api_bazar.dto.response.DetalleVentaResponse;
+import com.bazar.api_bazar.dto.response.MayorVentaResponse;
+import com.bazar.api_bazar.dto.response.VentaResponse;
+import com.bazar.api_bazar.dto.response.VentasDiaResponse;
 import com.bazar.api_bazar.service.IVentaService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 
 @RestController
+@RequestMapping("/api/v1/ventas")
+@RequiredArgsConstructor
 public class VentaController {
 
-    @Autowired
-    private IVentaService ventaService;
+    private final IVentaService ventaService;
 
-    // Crear una venta
-    @PostMapping("/ventas/crear")
-    public ResponseEntity<String> crearVenta(@RequestBody Venta venta) {
-        ventaService.saveVenta(venta);
-        return new ResponseEntity<>("Venta creada correctamente", HttpStatus.CREATED);
+    @PostMapping
+    public ResponseEntity<VentaResponse> crear(@Valid @RequestBody VentaRequest request) {
+        VentaResponse creada = ventaService.crear(request);
+        URI ubicacion = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(creada.codigoVenta()).toUri();
+        return ResponseEntity.created(ubicacion).body(creada);
     }
 
-    // Traer lista completa
-    @GetMapping("/ventas")
-    public ResponseEntity<List<Venta>> traerVentas() {
-        List<Venta> ventas = ventaService.getVentas();
-        return new ResponseEntity<>(ventas, HttpStatus.OK);
+    @GetMapping
+    public Page<VentaResponse> listar(Pageable pageable) {
+        return ventaService.listar(pageable);
     }
 
-    // traer una venta en particular
-    @GetMapping("/ventas/{codigo_venta}")
-    public ResponseEntity<Venta> traerVenta(@PathVariable Long codigo_venta) {
-        Venta venta = ventaService.getVenta(codigo_venta);
-        return new ResponseEntity<>(venta, HttpStatus.OK);
+    @GetMapping("/{id}")
+    public VentaResponse obtener(@PathVariable Long id) {
+        return ventaService.obtener(id);
     }
 
-    // Eliminar venta
-    @DeleteMapping("/ventas/eliminar/{codigo_venta}")
-    public ResponseEntity<String> eliminarVenta(@PathVariable Long codigo_venta) {
-        ventaService.deleteVenta(codigo_venta);
-        return new ResponseEntity<>("Venta eliminada correctamente", HttpStatus.OK);
+    @PutMapping("/{id}")
+    public VentaResponse actualizar(@PathVariable Long id, @Valid @RequestBody VentaRequest request) {
+        return ventaService.actualizar(id, request);
     }
 
-    // Editar venta
-    @PutMapping("/ventas/editar/{codigo_venta}")
-    public ResponseEntity<Venta> editarVenta(@PathVariable Long codigo_venta, @RequestBody Venta ventaEditada) {
-        ventaEditada.setCodigoVenta(codigo_venta);
-        ventaService.editVenta(ventaEditada);
-
-        Venta ventaActualizada = ventaService.getVenta(codigo_venta);
-        return new ResponseEntity<>(ventaActualizada, HttpStatus.OK);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        ventaService.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 
-    // Requerimiento 5 Obtener la lista de productos de una determinada venta
-    @GetMapping("/ventas/productos/{codigo_venta}")
-    public ResponseEntity<List<Producto>> traerProductosDeVenta(@PathVariable Long codigo_venta) {
-        List<Producto> productos = ventaService.getProductosByVenta(codigo_venta);
-        return new ResponseEntity<>(productos, HttpStatus.OK);
+    /** Requerimiento 5: productos de una venta. */
+    @GetMapping("/{id}/productos")
+    public List<DetalleVentaResponse> listarProductos(@PathVariable Long id) {
+        return ventaService.listarProductos(id);
     }
 
-    //requerimiento 6 - Obtener la sumatoria del monto y también cantidad total de ventas de un determinado día
-    @GetMapping("/ventas/dia/{fecha_venta}")
-    public ResponseEntity<VentasDiaDTO> getTotalesPorFecha(@PathVariable LocalDate fecha_venta) {
-        VentasDiaDTO totales = ventaService.getTotalesPorDia(fecha_venta);
-        return new ResponseEntity<>(totales, HttpStatus.OK);
+    /** Requerimiento 6: monto total y cantidad de ventas de un día (fecha ISO: yyyy-MM-dd). */
+    @GetMapping("/reportes/dia/{fecha}")
+    public VentasDiaResponse totalesPorDia(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        return ventaService.totalesPorDia(fecha);
     }
 
-    //requerimiento 7 - Obtener el codigo_venta, el total, la cantidad de productos, el nombre del cliente y el
-    //apellido del cliente de la venta con el monto más alto de todas.
-    @GetMapping("/ventas/mayor_venta")
-    public ResponseEntity<MayorVentaDTO> getMayorVenta() {
-        MayorVentaDTO mayorVenta = ventaService.getMayorVenta();
-
-        if (mayorVenta != null) {
-            return new ResponseEntity<>(mayorVenta, HttpStatus.OK);
-        }
-
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    /** Requerimiento 7: venta de mayor monto. */
+    @GetMapping("/reportes/mayor")
+    public MayorVentaResponse mayorVenta() {
+        return ventaService.mayorVenta();
     }
 }

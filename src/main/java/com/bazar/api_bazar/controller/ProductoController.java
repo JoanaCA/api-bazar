@@ -1,62 +1,64 @@
 package com.bazar.api_bazar.controller;
 
-import com.bazar.api_bazar.model.Producto;
+import com.bazar.api_bazar.dto.request.ProductoRequest;
+import com.bazar.api_bazar.dto.response.ProductoResponse;
 import com.bazar.api_bazar.service.IProductoService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.util.List;
+import java.net.URI;
 
 @RestController
+@RequestMapping("/api/v1/productos")
+@RequiredArgsConstructor
 public class ProductoController {
 
-    @Autowired
-    private IProductoService productoService;
+    private final IProductoService productoService;
 
-    // Crear un producto.
-    @PostMapping("/productos/crear")
-    public ResponseEntity<String> crearProducto(@RequestBody Producto producto) {
-        productoService.saveProducto(producto);
-        return new ResponseEntity<>("Producto creado correctamente", HttpStatus.CREATED); //201
+    @PostMapping
+    public ResponseEntity<ProductoResponse> crear(@Valid @RequestBody ProductoRequest request) {
+        ProductoResponse creado = productoService.crear(request);
+        URI ubicacion = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(creado.codigoProducto()).toUri();
+        return ResponseEntity.created(ubicacion).body(creado);
     }
 
-    // Traer todos los productos.
-    @GetMapping("/productos")
-    public ResponseEntity<List<Producto>> traerProductos(){
-        List <Producto> productos = productoService.getProductos();
-        return new ResponseEntity<>(productos, HttpStatus.OK);
+    @GetMapping
+    public Page<ProductoResponse> listar(Pageable pageable) {
+        return productoService.listar(pageable);
     }
 
-    // Traer un producto en particular.
-    @GetMapping("/productos/{codigo_producto}")
-    public ResponseEntity<Producto> traerProducto(@PathVariable Long codigo_producto) {
-        Producto producto = productoService.getProducto(codigo_producto);
-        return new ResponseEntity<>(producto, HttpStatus.OK);
+    /** Requerimiento 4: productos con stock bajo (umbral configurable: bazar.stock.minimo). */
+    @GetMapping("/stock-bajo")
+    public Page<ProductoResponse> listarStockBajo(Pageable pageable) {
+        return productoService.listarStockBajo(pageable);
     }
 
-    // Eliminar producto.
-    @DeleteMapping("/productos/eliminar/{codigo_producto}")
-    public ResponseEntity<String> eliminarProducto(@PathVariable Long codigo_producto) {
-        productoService.deleteProducto(codigo_producto);
-        return new ResponseEntity<>("Producto eliminado correctamente", HttpStatus.OK);
+    @GetMapping("/{id}")
+    public ProductoResponse obtener(@PathVariable Long id) {
+        return productoService.obtener(id);
     }
 
-    // Editar producto.
-    @PutMapping("/productos/editar/{codigo_producto}")
-    public ResponseEntity<Producto> editarProducto(@PathVariable Long codigo_producto, @RequestBody Producto productoEditado) {
-        productoEditado.setCodigo_producto(codigo_producto);
-        productoService.editProducto(productoEditado);
-
-        Producto productoActualizado = productoService.getProducto(codigo_producto);
-        return new ResponseEntity<>(productoActualizado, HttpStatus.OK);
+    @PutMapping("/{id}")
+    public ProductoResponse actualizar(@PathVariable Long id, @Valid @RequestBody ProductoRequest request) {
+        return productoService.actualizar(id, request);
     }
 
-    // Requerimiento 4 - Obtener todos los productos cuya cantidad_disponible sea menor a 5
-    @GetMapping("/productos/falta_stock")
-    public ResponseEntity<List<Producto>> traerProductosFaltaStock() {
-        List<Producto> productosFaltaStock = productoService.getProductosFaltaStock();
-        return new ResponseEntity<>(productosFaltaStock, HttpStatus.OK);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        productoService.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 }
