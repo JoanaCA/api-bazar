@@ -1,6 +1,8 @@
-package com.bazar.api_bazar;
+package com.bazar.api_bazar.integration;
 
+import com.bazar.api_bazar.support.AbstractMySqlTest;
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,27 +18,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Smoke test provisional: recorre el flujo principal contra H2 en memoria para validar que el contexto,
- * las consultas JPA, las validaciones y el manejo de errores funcionan sin necesidad de MySQL.
- * En la Fase 2 se reemplaza por tests unitarios y de integración con Testcontainers.
+ * Recorre el flujo principal de la API (HTTP -> service -> MySQL real) para validar que las piezas funcionan juntas.
  */
-@SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:bazar;MODE=MySQL;DB_CLOSE_DELAY=-1",
-        "spring.datasource.username=sa",
-        "spring.datasource.password=",
-        "spring.jpa.hibernate.ddl-auto=create-drop"
-})
+@SpringBootTest
 @AutoConfigureMockMvc
-class ApiBazarApplicationTests {
+class FlujoVentaIT extends AbstractMySqlTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Test
+    @DisplayName("El contexto de Spring arranca contra MySQL con el esquema de Flyway validado por Hibernate")
     void contextLoads() {
     }
 
     @Test
+    @DisplayName("Flujo completo: crear, vender, consultar reportes, anular y comprobar el stock")
     void flujoCompletoDeVentas() throws Exception {
         long clienteId = idDe(crear("/api/v1/clientes",
                 "{\"nombre\":\"Ana\",\"apellido\":\"Perez\",\"dni\":\"30123456\"}"), "idCliente");
@@ -63,7 +60,7 @@ class ApiBazarApplicationTests {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Stock insuficiente"));
 
-        // Producto inexistente en la venta -> 404 (antes se ignoraba en silencio)
+        // Producto inexistente en la venta -> 404
         String inexistenteJson = "{\"clienteId\":%d,\"items\":[{\"productoId\":99999,\"cantidad\":1}]}".formatted(clienteId);
         mockMvc.perform(post("/api/v1/ventas").contentType(MediaType.APPLICATION_JSON).content(inexistenteJson))
                 .andExpect(status().isNotFound());
@@ -76,7 +73,7 @@ class ApiBazarApplicationTests {
                 .andExpect(jsonPath("$.errores.costo").exists())
                 .andExpect(jsonPath("$.errores.cantidadDisponible").exists());
 
-        // Recurso inexistente -> 404 (antes: 200 con cuerpo vacío)
+        // Recurso inexistente -> 404
         mockMvc.perform(get("/api/v1/productos/99999")).andExpect(status().isNotFound());
 
         // Requerimientos 5, 6 y 7
