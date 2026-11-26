@@ -9,8 +9,9 @@ Proyecto basado en el integrador del curso [Desarrollo de APIs con Spring Boot](
 
 - Java 21
 - Spring Boot 4.2 (Spring Web MVC, Spring Data JPA, Bean Validation)
-- MySQL 8
+- MySQL 8 y migraciones con Flyway
 - MapStruct y Lombok
+- JUnit 5, Mockito, AssertJ, Testcontainers y JaCoCo
 - Maven (wrapper incluido)
 
 ## Funcionalidades
@@ -26,7 +27,8 @@ Proyecto basado en el integrador del curso [Desarrollo de APIs con Spring Boot](
 ## Requisitos
 
 - JDK 21
-- MySQL 8 en ejecución (la base `bazar` se crea sola si el usuario tiene permisos)
+- MySQL 8 en ejecución (la base `bazar` se crea sola si el usuario tiene permisos; Flyway crea las tablas al arrancar)
+- Docker en ejecución (solo si vas a correr los tests de integración contra MySQL real con `verify`)
 
 ## Configuración
 
@@ -148,25 +150,38 @@ En [`coleccion_bruno/`](coleccion_bruno) hay una colección lista para abrir con
 
 ## Pruebas
 
-```bash
-./mvnw clean test
-```
+La suite está dividida en pruebas rápidas (`*Test`, Surefire) y pruebas contra base de datos real (`*IT`, Failsafe):
 
-Por ahora hay un test de humo (`ApiBazarApplicationTests`) que recorre el flujo principal contra H2 en memoria, sin necesitar MySQL.
+- **Suite rápida (sin Docker):** ejecuta tests unitarios (dominio, mappers, validaciones de DTOs, services), `GlobalExceptionHandler` y tests de capa web (`@WebMvcTest`):
+
+  ```bash
+  ./mvnw test
+  ```
+
+- **Suite completa (requiere Docker en ejecución):** ejecuta todo lo anterior más los tests de repositorios (`@DataJpaTest`), migraciones de Flyway, flujo completo y concurrencia contra **MySQL 8.4 real** mediante Testcontainers, y genera y verifica la cobertura con JaCoCo:
+
+  ```bash
+  ./mvnw verify
+  ```
+
+  En Windows usá `.\mvnw.cmd test` o `.\mvnw.cmd verify`.
+
+- **Cobertura (JaCoCo):** tras `./mvnw verify` se genera el informe HTML en `target/site/jacoco/index.html`. El build falla si la cobertura cae por debajo de **80% de líneas** o **70% de ramas** sobre el código con lógica.
 
 ## Decisiones de diseño
 
 - **Capas**: `controller` → `service` → `repository`. Los controllers no conocen las entidades JPA: reciben y devuelven DTOs (`record`) mapeados con MapStruct.
 - **Venta con `DetalleVenta`** en lugar de una relación muchos-a-muchos simple: permite cantidades y conservar el precio histórico.
 - **Dinero** en `BigDecimal` y **stock** en `Integer`.
-- **Concurrencia**: `Producto` usa `@Version` (bloqueo optimista) para evitar stock negativo con ventas simultáneas.
+- **Migraciones**: el esquema está versionado con **Flyway** (`src/main/resources/db/migration/V1__esquema_inicial.sql`) y `spring.jpa.hibernate.ddl-auto=validate` comprueba al arrancar que las entidades coincidan con la base.
+- **Concurrencia**: `Producto` usa `@Version` (bloqueo optimista) y `VentaService` actualiza los productos en orden por ID antes de insertar detalles para evitar deadlocks en InnoDB; las colisiones responden `409 Conflict`.
 - **Transacciones**: lecturas en `readOnly`; escrituras atómicas.
 - **Errores**: un único `@RestControllerAdvice` que responde en formato `ProblemDetail`.
 
 ## Hoja de ruta
 
-- [ ] Tests unitarios e integración (JUnit 5, Mockito, Testcontainers) y cobertura con JaCoCo
-- [ ] Migraciones de base de datos con Flyway
+- [x] Tests unitarios e integración (JUnit 5, Mockito, Testcontainers) y cobertura con JaCoCo
+- [x] Migraciones de base de datos con Flyway
 - [ ] Autenticación y roles con Spring Security + JWT
 - [ ] Docker, Docker Compose y GitHub Actions
 - [ ] Documentación OpenAPI / Swagger

@@ -53,11 +53,18 @@ class VentaTest {
         a.setCodigoVenta(1L);
         Venta b = new Venta();
         b.setCodigoVenta(1L);
+        Venta distinta = new Venta();
+        distinta.setCodigoVenta(2L);
         Venta sinId1 = new Venta();
         Venta sinId2 = new Venta();
 
-        assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
+        assertThat(a)
+                .isEqualTo(a)
+                .isEqualTo(b)
+                .hasSameHashCodeAs(b)
+                .isNotEqualTo(distinta)
+                .isNotEqualTo(sinId1)
+                .isNotEqualTo("no soy venta");
         assertThat(sinId1).isNotEqualTo(sinId2);
-        assertThat(a).isNotEqualTo(sinId1);
     }
 }

@@ -39,4 +39,26 @@ class DetalleVentaTest {
         assertThat(detalle.getPrecioUnitario()).isEqualByComparingTo("100.00");
         assertThat(detalle.getSubtotal()).isEqualByComparingTo("200.00");
     }
+
+    @Test
+    @DisplayName("equals compara por id y no considera iguales dos detalles sin id")
+    void equals_comparaPorId() {
+        DetalleVenta a = new DetalleVenta();
+        a.setId(1L);
+        DetalleVenta b = new DetalleVenta();
+        b.setId(1L);
+        DetalleVenta distinto = new DetalleVenta();
+        distinto.setId(2L);
+        DetalleVenta sinId1 = new DetalleVenta();
+        DetalleVenta sinId2 = new DetalleVenta();
+
+        assertThat(a)
+                .isEqualTo(a)
+                .isEqualTo(b)
+                .hasSameHashCodeAs(b)
+                .isNotEqualTo(distinto)
+                .isNotEqualTo(sinId1)
+                .isNotEqualTo("no soy detalle");
+        assertThat(sinId1).isNotEqualTo(sinId2);
+    }
 }
