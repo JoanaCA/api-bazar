@@ -2,6 +2,7 @@ package com.bazar.api_bazar.exception;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -52,6 +53,17 @@ class GlobalExceptionHandlerTest {
         assertThat(problema.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
         assertThat(problema.getTitle()).isEqualTo("Conflicto de concurrencia");
         assertThat(problema.getDetail()).doesNotContain("Optimistic", "Producto");
+    }
+
+    @Test
+    @DisplayName("CannotAcquireLockException -> 409 sin detalles técnicos")
+    void manejarConcurrencia_deadlock() {
+        ProblemDetail problema = handler.manejarConcurrencia(
+                new CannotAcquireLockException("Deadlock found when trying to get lock"));
+
+        assertThat(problema.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(problema.getTitle()).isEqualTo("Conflicto de concurrencia");
+        assertThat(problema.getDetail()).doesNotContain("Deadlock", "lock");
     }
 
     @Test

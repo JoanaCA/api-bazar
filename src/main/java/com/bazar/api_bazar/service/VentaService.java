@@ -24,9 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 @Service
 @RequiredArgsConstructor
@@ -112,11 +113,13 @@ public class VentaService implements IVentaService {
      * y calcula el total. Si algo falla se lanza una excepción y la transacción se revierte completa.
      */
     private void aplicarItems(Venta venta, List<ItemVentaRequest> items) {
-        // Si el mismo producto viene repetido se suman las cantidades.
-        Map<Long, Integer> cantidadesPorProducto = new LinkedHashMap<>();
+        // TreeMap ordena por productoId ascendente para evitar deadlocks cuando hay varios productos.
+        Map<Long, Integer> cantidadesPorProducto = new TreeMap<>();
         items.forEach(item -> cantidadesPorProducto.merge(item.productoId(), item.cantidad(), Integer::sum));
 
-        BigDecimal total = BigDecimal.ZERO;
+        // Paso 1: cargar y validar todos los productos antes de modificar nada.
+        record ItemValidado(Producto producto, int cantidad) {}
+        List<ItemValidado> validados = new ArrayList<>(cantidadesPorProducto.size());
         for (Map.Entry<Long, Integer> entrada : cantidadesPorProducto.entrySet()) {
             Producto producto = productoRepository.findById(entrada.getKey())
                     .orElseThrow(() -> new RecursoNoEncontradoException("producto", entrada.getKey()));
@@ -126,13 +129,25 @@ public class VentaService implements IVentaService {
                 throw new StockInsuficienteException(
                         producto.getNombre(), producto.getCantidadDisponible(), solicitado);
             }
-            producto.setCantidadDisponible(producto.getCantidadDisponible() - solicitado);
+            validados.add(new ItemValidado(producto, solicitado));
+        }
 
+        // Paso 2: ejecutar los UPDATE de producto antes de insertar en detalle_venta,
+        // evitando el escalado de S-lock (FK) a X-lock que provoca deadlocks en InnoDB.
+        for (ItemValidado item : validados) {
+            Producto producto = item.producto();
+            producto.setCantidadDisponible(producto.getCantidadDisponible() - item.cantidad());
+            productoRepository.saveAndFlush(producto);
+        }
+
+        // Paso 3: armar los detalles y calcular el total.
+        BigDecimal total = BigDecimal.ZERO;
+        for (ItemValidado item : validados) {
             DetalleVenta detalle = new DetalleVenta();
             detalle.setVenta(venta);
-            detalle.setProducto(producto);
-            detalle.setCantidad(solicitado);
-            detalle.setPrecioUnitario(producto.getCosto());
+            detalle.setProducto(item.producto());
+            detalle.setCantidad(item.cantidad());
+            detalle.setPrecioUnitario(item.producto().getCosto());
             venta.getDetalles().add(detalle);
 
             total = total.add(detalle.getSubtotal());

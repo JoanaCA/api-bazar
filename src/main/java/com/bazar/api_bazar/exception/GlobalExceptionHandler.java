@@ -1,12 +1,12 @@
 package com.bazar.api_bazar.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -46,8 +46,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problema;
     }
 
-    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-    public ProblemDetail manejarConcurrencia(ObjectOptimisticLockingFailureException ex) {
+    @ExceptionHandler(ConcurrencyFailureException.class)
+    public ProblemDetail manejarConcurrencia(ConcurrencyFailureException ex) {
         ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                 "El recurso fue modificado por otra operación al mismo tiempo. Reintente la solicitud.");
         problema.setTitle("Conflicto de concurrencia");
