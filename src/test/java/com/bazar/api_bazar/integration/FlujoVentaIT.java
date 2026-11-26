@@ -1,7 +1,12 @@
 package com.bazar.api_bazar.integration;
 
+import com.bazar.api_bazar.repository.ClienteRepository;
+import com.bazar.api_bazar.repository.ProductoRepository;
+import com.bazar.api_bazar.repository.VentaRepository;
 import com.bazar.api_bazar.support.AbstractMySqlTest;
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +31,23 @@ class FlujoVentaIT extends AbstractMySqlTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private VentaRepository ventaRepository;
+
+    @Autowired
+    private ProductoRepository productoRepository;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
+
+    @BeforeEach
+    @AfterEach
+    void limpiarBaseDeDatos() {
+        ventaRepository.deleteAll();
+        productoRepository.deleteAll();
+        clienteRepository.deleteAll();
+    }
 
     @Test
     @DisplayName("El contexto de Spring arranca contra MySQL con el esquema de Flyway validado por Hibernate")

@@ -4,6 +4,7 @@ import com.bazar.api_bazar.support.AbstractMySqlTest;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
 import org.flywaydb.core.api.MigrationState;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,11 @@ class FlywayMigrationIT extends AbstractMySqlTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @AfterEach
+    void limpiarDatosDePrueba() {
+        jdbc.update("DELETE FROM cliente WHERE dni = '99000001'");
+    }
 
     @Test
     @DisplayName("Todas las migraciones están aplicadas y sin errores")
